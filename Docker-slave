@@ -1,0 +1,39 @@
+FROM ubuntu:xenial
+MAINTAINER RNS
+
+
+#RUN add-apt-repository ppa:openjdk-r/ppa
+# Make sure the package repository is up to date.
+RUN apt-get update
+RUN apt-get -y upgrade
+RUN apt-get install -y git curl
+# Install a basic SSH server
+RUN apt-get install -y openssh-server
+RUN sed -i 's|session    required     pam_loginuid.so|session    optional     pam_loginuid.so|g' /etc/pam.d/sshd
+RUN mkdir -p /var/run/sshd
+
+# Install JDK 8 (latest edition)
+RUN apt-get install -y openjdk-8-jdk
+
+# Add user jenkins to the image
+RUN adduser --quiet jenkins
+# Set password for the jenkins user (you may want to alter this).
+RUN echo "jenkins:jenkins" | chpasswd
+
+RUN mkdir /var/jenkins_home
+
+RUN mkdir -p /tmp/download && \
+ curl -L https://download.docker.com/linux/static/stable/x86_64/docker-18.03.1-ce.tgz | tar -xz -C /tmp/download && \
+ rm -rf /tmp/download/docker/dockerd && \
+ mv /tmp/download/docker/docker* /usr/local/bin/ && \
+ rm -rf /tmp/download && \
+ groupadd -g 999 docker && \
+ usermod -aG staff,docker jenkins
+
+RUN chown -R jenkins:jenkins /var/jenkins_home
+
+#RUN apt-get install -y maven
+# Standard SSH port
+EXPOSE 22
+
+CMD ["/usr/sbin/sshd", "-D"]
